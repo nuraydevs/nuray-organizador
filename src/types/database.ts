@@ -51,6 +51,9 @@ export type ReminderRelatedType =
 
 export type NotificationTargetType = "individual" | "team";
 
+export type QuickCaptureType = "text" | "audio";
+export type QuickCaptureStatus = "pending" | "processed";
+
 export interface DbBase {
   id: string;
   created_at: string;
@@ -144,6 +147,15 @@ export interface NotificationTarget extends DbBase {
   is_default: boolean;
   is_active: boolean;
   notes: string | null;
+}
+
+export interface QuickCapture extends DbBase {
+  type: QuickCaptureType;
+  content: string | null;
+  audio_url: string | null;
+  audio_path: string | null;
+  status: QuickCaptureStatus;
+  source: string | null;
 }
 
 export interface AppSetting extends DbBase {

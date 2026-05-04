@@ -200,6 +200,29 @@ for each row execute function set_updated_at();
 create index if not exists idx_events_start on public.calendar_events (start_at);
 
 -- =============================================================
+-- quick_captures
+-- Inbox for fast text/audio notes that get processed manually later.
+-- =============================================================
+create table if not exists public.quick_captures (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('text','audio')),
+  content text,
+  audio_url text,
+  audio_path text,
+  status text not null default 'pending' check (status in ('pending','processed')),
+  source text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace trigger trg_captures_updated_at before update on public.quick_captures
+for each row execute function set_updated_at();
+
+create index if not exists idx_captures_status     on public.quick_captures (status);
+create index if not exists idx_captures_created_at on public.quick_captures (created_at desc);
+create index if not exists idx_captures_type       on public.quick_captures (type);
+
+-- =============================================================
 -- app_settings (single-row key/value store, optional)
 -- =============================================================
 create table if not exists public.app_settings (
@@ -228,6 +251,7 @@ alter table public.task_checklist_items  enable row level security;
 alter table public.calendar_events       enable row level security;
 alter table public.app_settings          enable row level security;
 alter table public.notification_targets  enable row level security;
+alter table public.quick_captures        enable row level security;
 
 do $$ begin
   if not exists (select 1 from pg_policies where policyname = 'open_clients') then
@@ -253,6 +277,42 @@ do $$ begin
   end if;
   if not exists (select 1 from pg_policies where policyname = 'open_targets') then
     create policy open_targets on public.notification_targets for all using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'open_captures') then
+    create policy open_captures on public.quick_captures for all using (true) with check (true);
+  end if;
+end $$;
+
+-- =============================================================
+-- Supabase Storage: quick-captures bucket + open MVP policies
+-- Public bucket so audio_url can be played without signed URLs.
+-- 25 MB cap, audio mime types only.
+-- =============================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'quick-captures',
+  'quick-captures',
+  true,
+  26214400,
+  array['audio/webm','audio/ogg','audio/mp4','audio/mpeg','audio/wav','audio/x-m4a']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='qc_select') then
+    create policy qc_select on storage.objects for select using (bucket_id = 'quick-captures');
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='qc_insert') then
+    create policy qc_insert on storage.objects for insert with check (bucket_id = 'quick-captures');
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='qc_update') then
+    create policy qc_update on storage.objects for update using (bucket_id = 'quick-captures') with check (bucket_id = 'quick-captures');
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='qc_delete') then
+    create policy qc_delete on storage.objects for delete using (bucket_id = 'quick-captures');
   end if;
 end $$;
 

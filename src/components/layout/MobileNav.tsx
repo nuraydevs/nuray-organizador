@@ -7,16 +7,16 @@ import {
   Calendar,
   ListChecks,
   Users,
-  Bell,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/tasks", label: "Tareas", icon: ListChecks },
   { href: "/calendar", label: "Agenda", icon: Calendar },
   { href: "/clients", label: "Clientes", icon: Users },
-  { href: "/reminders", label: "Avisos", icon: Bell },
 ];
 
 export function MobileNav() {

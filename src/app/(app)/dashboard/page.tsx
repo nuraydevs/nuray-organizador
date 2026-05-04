@@ -11,6 +11,9 @@ import {
   FolderKanban,
   Bell,
   AlertTriangle,
+  Inbox as InboxIcon,
+  FileText,
+  Mic,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -24,10 +27,12 @@ import { listEvents } from "@/lib/repositories/events";
 import { listClients } from "@/lib/repositories/clients";
 import { listProjects } from "@/lib/repositories/projects";
 import { listReminders } from "@/lib/repositories/reminders";
+import { listQuickCaptures } from "@/lib/repositories/quickCaptures";
 import type {
   CalendarEvent,
   Client,
   Project,
+  QuickCapture,
   Reminder,
   Task,
 } from "@/types/database";
@@ -40,24 +45,27 @@ export default function DashboardPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [captures, setCaptures] = useState<QuickCapture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [t, e, c, p, r] = await Promise.all([
+      const [t, e, c, p, r, q] = await Promise.all([
         listTasks(),
         listEvents(),
         listClients(),
         listProjects(),
         listReminders(),
+        listQuickCaptures(),
       ]);
       setTasks(t);
       setEvents(e);
       setClients(c);
       setProjects(p);
       setReminders(r);
+      setCaptures(q);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar");
     } finally {
@@ -94,10 +102,6 @@ export default function DashboardPage() {
       ),
     [tasks],
   );
-  const tasksBlocked = useMemo(
-    () => tasks.filter((t) => t.status === "blocked"),
-    [tasks],
-  );
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     const in7d = addDays(now, 7);
@@ -114,6 +118,14 @@ export default function DashboardPage() {
       .filter((r) => r.status === "scheduled" && isAfter(new Date(r.remind_at), now))
       .slice(0, 6);
   }, [reminders]);
+  const pendingCaptures = useMemo(
+    () => captures.filter((c) => c.status === "pending"),
+    [captures],
+  );
+  const recentCaptures = useMemo(
+    () => pendingCaptures.slice(0, 3),
+    [pendingCaptures],
+  );
   const activeClients = useMemo(
     () =>
       clients.filter((c) =>
@@ -157,7 +169,7 @@ export default function DashboardPage() {
           label="Urgentes"
           value={tasksUrgent.length}
         />
-        <Stat icon={<ListChecks size={14} />} label="Bloqueadas" value={tasksBlocked.length} />
+        <Stat icon={<InboxIcon size={14} />} label="Inbox pendientes" value={pendingCaptures.length} />
         <Stat icon={<CalendarIcon size={14} />} label="Eventos 7d" value={upcomingEvents.length} />
         <Stat icon={<Users size={14} />} label="Clientes activos" value={activeClients.length} />
         <Stat
@@ -168,6 +180,56 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <InboxIcon size={14} /> Inbox
+              </span>
+              <Link href="/inbox" className="text-xs text-muted-foreground hover:underline">
+                Ver inbox ({pendingCaptures.length})
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentCaptures.length === 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Sin capturas pendientes.
+                </p>
+                <Button size="sm" variant="outline" onClick={() => quickAdd.open()}>
+                  <Plus size={14} /> Añadir captura
+                </Button>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {recentCaptures.map((c) => (
+                  <li key={c.id} className="flex items-start gap-2 text-sm">
+                    <span className="mt-0.5 text-muted-foreground shrink-0">
+                      {c.type === "audio" ? <Mic size={14} /> : <FileText size={14} />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate">
+                        {c.type === "text"
+                          ? c.content || "(sin texto)"
+                          : "Nota de voz"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {smartDateLabel(c.created_at)}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+                <li className="pt-1">
+                  <Button size="sm" variant="outline" onClick={() => quickAdd.open()}>
+                    <Plus size={14} /> Añadir captura
+                  </Button>
+                </li>
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">

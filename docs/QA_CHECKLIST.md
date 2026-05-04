@@ -80,6 +80,20 @@ Lista mínima para validar la app antes y después de un cambio.
 - [ ] Tablas legibles.
 - [ ] Cards alineadas y consistentes.
 
+## Inbox / Quick Capture
+
+- [ ] Crear captura de texto rápida desde Añadir rápido.
+- [ ] Aparece en `/inbox` como pendiente.
+- [ ] Marcar como procesada.
+- [ ] Devolver a pendiente.
+- [ ] Borrar captura de texto.
+- [ ] Crear captura de audio (permisos micro, grabación, detener, repetir).
+- [ ] Reproducir audio desde el inbox.
+- [ ] Borrar captura de audio (verificar que el archivo del bucket también se elimina).
+- [ ] Estado vacío del inbox se ve bien.
+- [ ] Widget de Inbox del Dashboard muestra contador y últimas 3.
+- [ ] Acceso desde Sidebar y MobileNav.
+
 ## Build
 
 - [ ] `npm run lint` sin errores.

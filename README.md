@@ -6,7 +6,8 @@ sin animaciones innecesarias.
 
 ## Funcionalidades
 
-- **Dashboard** con tareas de hoy, urgentes, bloqueadas, próximos eventos y recordatorios.
+- **Dashboard** con tareas de hoy, urgentes, bloqueadas, próximos eventos, recordatorios e inbox.
+- **Inbox** (Quick Capture) para guardar texto y notas de voz rápido y procesarlas después.
 - **Tareas** con vista lista y kanban, checklist interno, filtros y búsqueda.
 - **Calendario** mensual con día seleccionado, eventos, fechas límite y recordatorios.
 - **Clientes Nuray** (mini-CRM): estado comercial, estado del proyecto, notas, links.
@@ -14,7 +15,21 @@ sin animaciones innecesarias.
 - **Recordatorios** programables, en la app o por Telegram.
 - **Configuración** con estado del entorno (Supabase / Telegram / acceso).
 - **Acceso interno** por código compartido (`NURAY_ACCESS_CODE`).
-- **Quick Add** móvil para crear tarea o recordatorio en segundos.
+- **Quick Add** móvil con 4 modos: Texto e ideas (Inbox), Audio (Inbox), Tarea, Recordatorio.
+
+### Quick Capture Inbox
+
+Texto o nota de voz rápida que se guardan como **captura pendiente** sin
+estructurarla todavía como tarea/cliente/proyecto. Después se procesa desde
+`/inbox`.
+
+- Audio se sube al bucket de Supabase Storage `quick-captures` (público,
+  límite 25 MB, audio mime types). El `audio_url` resultante se reproduce
+  con un `<audio>` HTML5 desde el inbox.
+- No hay transcripción automática. La intención es capturar primero y
+  procesar a mano cuando haya tiempo.
+- Borrar una captura de audio elimina también el archivo del bucket
+  (best-effort: si falla, queda documentado en el toast).
 
 ## Stack
 

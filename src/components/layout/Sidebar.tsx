@@ -10,11 +10,13 @@ import {
   FolderKanban,
   Bell,
   Settings,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/tasks", label: "Tareas", icon: ListChecks },
   { href: "/calendar", label: "Calendario", icon: Calendar },
   { href: "/clients", label: "Clientes", icon: Users },
