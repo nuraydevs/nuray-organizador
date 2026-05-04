@@ -54,6 +54,7 @@ export function Field({
   htmlFor,
   hint,
   error,
+  required,
   children,
   className,
 }: {
@@ -61,12 +62,22 @@ export function Field({
   htmlFor?: string;
   hint?: string;
   error?: string;
+  required?: boolean;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("space-y-1", className)}>
-      {label ? <Label htmlFor={htmlFor}>{label}</Label> : null}
+      {label ? (
+        <Label htmlFor={htmlFor}>
+          {label}
+          {required ? (
+            <span className="text-rose-600 ml-0.5" aria-hidden="true">
+              *
+            </span>
+          ) : null}
+        </Label>
+      ) : null}
       {children}
       {error ? (
         <p className="text-xs text-destructive">{error}</p>

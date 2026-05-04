@@ -133,6 +133,7 @@ export function ReminderEditor({
       open={open}
       onClose={onClose}
       title={reminder ? "Editar recordatorio" : "Nuevo recordatorio"}
+      description="Solo título, fecha y canal son obligatorios. Puedes completar el resto más tarde."
       size="md"
       footer={
         <div className="flex w-full items-center justify-between">
@@ -182,7 +183,7 @@ export function ReminderEditor({
       }
     >
       <form id="reminder-editor" onSubmit={onSubmit} className="space-y-3">
-        <Field label="Título" htmlFor="r-title">
+        <Field label="Título" htmlFor="r-title" required>
           <Input
             id="r-title"
             value={title}
@@ -201,7 +202,7 @@ export function ReminderEditor({
           />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Fecha y hora" htmlFor="r-at">
+          <Field label="Fecha y hora" htmlFor="r-at" required>
             <Input
               id="r-at"
               type="datetime-local"

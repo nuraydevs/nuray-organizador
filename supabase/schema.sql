@@ -41,7 +41,7 @@ create table if not exists public.clients (
   next_action_date timestamptz,
   notes text,
   important_links jsonb,
-  payment_status text not null default 'unpaid'
+  payment_status text not null default 'not_applicable'
     check (payment_status in ('unpaid','partially_paid','paid','not_applicable')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -57,7 +57,7 @@ create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text,
-  type text not null default 'personal'
+  type text not null default 'internal'
     check (type in ('agency','study','personal','internal')),
   status text not null default 'active'
     check (status in ('active','paused','completed','archived')),

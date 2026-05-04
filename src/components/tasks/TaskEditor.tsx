@@ -158,6 +158,7 @@ export function TaskEditor({
       open={open}
       onClose={onClose}
       title={task ? "Editar tarea" : "Nueva tarea"}
+      description="Solo el título es obligatorio. Puedes completar el resto más tarde."
       size="lg"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
@@ -207,7 +208,7 @@ export function TaskEditor({
       }
     >
       <form id="task-editor" onSubmit={onSubmit} className="space-y-4">
-        <Field label="Título" htmlFor="t-title">
+        <Field label="Título" htmlFor="t-title" required>
           <Input
             id="t-title"
             value={title}

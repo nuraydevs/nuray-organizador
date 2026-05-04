@@ -303,6 +303,7 @@ function TargetEditor({
       open={open}
       onClose={onClose}
       title={target ? "Editar destinatario" : "Nuevo destinatario"}
+      description="Solo nombre y chat_id son obligatorios. Puedes completar el resto más tarde."
       size="md"
       footer={
         <>
@@ -316,7 +317,7 @@ function TargetEditor({
       }
     >
       <form id="target-editor" onSubmit={onSubmit} className="space-y-3">
-        <Field label="Nombre" htmlFor="tg-name">
+        <Field label="Nombre" htmlFor="tg-name" required>
           <Input
             id="tg-name"
             value={name}
@@ -344,6 +345,7 @@ function TargetEditor({
             label="Telegram chat_id"
             htmlFor="tg-chat"
             hint="Número que aparece en api.telegram.org/bot.../getUpdates"
+            required
           >
             <Input
               id="tg-chat"

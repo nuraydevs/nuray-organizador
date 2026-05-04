@@ -109,7 +109,7 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
         </button>
       </div>
 
-      <Field label="Título" htmlFor="qa-title">
+      <Field label="Título" htmlFor="qa-title" required>
         <Input
           id="qa-title"
           value={title}

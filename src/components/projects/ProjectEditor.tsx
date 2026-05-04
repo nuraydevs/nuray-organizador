@@ -49,7 +49,7 @@ export function ProjectEditor({
   const toast = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<ProjectType>("personal");
+  const [type, setType] = useState<ProjectType>("internal");
   const [status, setStatus] = useState<ProjectStatus>("active");
   const [priority, setPriority] = useState<Priority>("medium");
   const [startDate, setStartDate] = useState("");
@@ -62,7 +62,7 @@ export function ProjectEditor({
     if (!open) return;
     setName(project?.name ?? "");
     setDescription(project?.description ?? "");
-    setType(project?.type ?? "personal");
+    setType(project?.type ?? "internal");
     setStatus(project?.status ?? "active");
     setPriority(project?.priority ?? "medium");
     setStartDate(toInputDate(project?.start_date));
@@ -121,6 +121,7 @@ export function ProjectEditor({
       open={open}
       onClose={onClose}
       title={project ? "Editar proyecto" : "Nuevo proyecto"}
+      description="Solo el nombre es obligatorio. Puedes completar el resto más tarde."
       size="md"
       footer={
         <div className="flex w-full items-center justify-between">
@@ -170,7 +171,7 @@ export function ProjectEditor({
       }
     >
       <form id="project-editor" onSubmit={onSubmit} className="space-y-3">
-        <Field label="Nombre" htmlFor="p-name">
+        <Field label="Nombre" htmlFor="p-name" required>
           <Input
             id="p-name"
             value={name}

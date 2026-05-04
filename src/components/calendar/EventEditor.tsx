@@ -121,6 +121,7 @@ export function EventEditor({
       open={open}
       onClose={onClose}
       title={event ? "Editar evento" : "Nuevo evento"}
+      description="Solo el título y la fecha de inicio son obligatorios. Puedes completar el resto más tarde."
       size="md"
       footer={
         <div className="flex w-full items-center justify-between">
@@ -170,7 +171,7 @@ export function EventEditor({
       }
     >
       <form id="event-editor" onSubmit={onSubmit} className="space-y-3">
-        <Field label="Título" htmlFor="e-title">
+        <Field label="Título" htmlFor="e-title" required>
           <Input
             id="e-title"
             value={title}
@@ -211,7 +212,7 @@ export function EventEditor({
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Inicio" htmlFor="e-start">
+          <Field label="Inicio" htmlFor="e-start" required>
             <Input
               id="e-start"
               type="datetime-local"

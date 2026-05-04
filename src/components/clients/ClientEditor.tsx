@@ -85,7 +85,7 @@ export function ClientEditor({
     setNextAction(client?.next_action ?? "");
     setNextActionDate(toInputDateTime(client?.next_action_date));
     setNotes(client?.notes ?? "");
-    setPaymentStatus(client?.payment_status ?? "unpaid");
+    setPaymentStatus(client?.payment_status ?? "not_applicable");
     setConfirmDelete(false);
   }, [open, client]);
 
@@ -146,6 +146,7 @@ export function ClientEditor({
       open={open}
       onClose={onClose}
       title={client ? "Editar cliente" : "Nuevo cliente"}
+      description="Solo el nombre es obligatorio. Puedes completar el resto más tarde."
       size="lg"
       footer={
         <div className="flex w-full items-center justify-between">
@@ -196,7 +197,7 @@ export function ClientEditor({
     >
       <form id="client-editor" onSubmit={onSubmit} className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Nombre" htmlFor="c-name">
+          <Field label="Nombre" htmlFor="c-name" required>
             <Input
               id="c-name"
               value={name}
