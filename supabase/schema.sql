@@ -101,6 +101,34 @@ create index if not exists idx_reminders_due
   on public.reminders (status, channel, remind_at);
 
 -- =============================================================
+-- notification_targets
+-- Telegram chat destinations. Individual users or groups/teams.
+-- =============================================================
+create table if not exists public.notification_targets (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  type text not null default 'individual'
+    check (type in ('individual','team')),
+  telegram_chat_id text not null,
+  is_default boolean not null default false,
+  is_active boolean not null default true,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace trigger trg_targets_updated_at before update on public.notification_targets
+for each row execute function set_updated_at();
+
+create index if not exists idx_targets_active on public.notification_targets (is_active);
+create index if not exists idx_targets_type on public.notification_targets (type);
+
+-- Add FK column to reminders (idempotent)
+alter table public.reminders
+  add column if not exists notification_target_id uuid
+  references public.notification_targets(id) on delete set null;
+
+-- =============================================================
 -- tasks
 -- =============================================================
 create table if not exists public.tasks (
@@ -199,6 +227,7 @@ alter table public.tasks                 enable row level security;
 alter table public.task_checklist_items  enable row level security;
 alter table public.calendar_events       enable row level security;
 alter table public.app_settings          enable row level security;
+alter table public.notification_targets  enable row level security;
 
 do $$ begin
   if not exists (select 1 from pg_policies where policyname = 'open_clients') then
@@ -222,7 +251,19 @@ do $$ begin
   if not exists (select 1 from pg_policies where policyname = 'open_settings') then
     create policy open_settings on public.app_settings for all using (true) with check (true);
   end if;
+  if not exists (select 1 from pg_policies where policyname = 'open_targets') then
+    create policy open_targets on public.notification_targets for all using (true) with check (true);
+  end if;
 end $$;
+
+-- =============================================================
+-- Seed: idempotent default Telegram target for Óliver
+-- =============================================================
+insert into public.notification_targets (name, type, telegram_chat_id, is_default, is_active, notes)
+select 'Óliver', 'individual', '6463198915', true, true, 'Destinatario por defecto (seed inicial)'
+where not exists (
+  select 1 from public.notification_targets where telegram_chat_id = '6463198915'
+);
 
 -- =============================================================
 -- Optional seed (uncomment to insert)

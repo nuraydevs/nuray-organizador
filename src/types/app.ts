@@ -39,4 +39,11 @@ export const EVENT_TYPES: { value: CalendarEventType; label: string }[] = [
   { value: "deadline", label: "Deadline" },
 ];
 
-export const APP_VERSION = "0.1.0";
+import type { NotificationTargetType } from "./database";
+
+export const NOTIFICATION_TARGET_TYPES: { value: NotificationTargetType; label: string }[] = [
+  { value: "individual", label: "Individual" },
+  { value: "team", label: "Equipo" },
+];
+
+export const APP_VERSION = "0.2.0";

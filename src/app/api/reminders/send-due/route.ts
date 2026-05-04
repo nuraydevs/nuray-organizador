@@ -48,9 +48,48 @@ async function handle(req: Request) {
   let sent = 0;
   let failed = 0;
 
+  // Resolve all referenced notification targets in one query
+  const targetIds = Array.from(
+    new Set(due.map((r) => r.notification_target_id).filter(Boolean) as string[]),
+  );
+  const targetsById = new Map<string, { telegram_chat_id: string; is_active: boolean }>();
+  if (targetIds.length > 0) {
+    const { data: targets } = await sb
+      .from("notification_targets")
+      .select("id, telegram_chat_id, is_active")
+      .in("id", targetIds);
+    (targets ?? []).forEach((t) =>
+      targetsById.set(t.id as string, {
+        telegram_chat_id: t.telegram_chat_id as string,
+        is_active: t.is_active as boolean,
+      }),
+    );
+  }
+
   for (const r of due) {
     const text = `${r.title}${r.message ? `\n\n${r.message}` : ""}`;
-    const result = await sendTelegramMessage({ message: text });
+
+    let chatId: string | undefined;
+    let resolveError: string | null = null;
+    if (r.notification_target_id) {
+      const target = targetsById.get(r.notification_target_id);
+      if (!target) {
+        resolveError = "Destinatario no encontrado";
+      } else if (!target.is_active) {
+        resolveError = "Destinatario inactivo";
+      } else {
+        chatId = target.telegram_chat_id;
+      }
+    }
+    // If no target, sendTelegramMessage falls back to TELEGRAM_CHAT_ID env
+
+    let result: { ok: boolean; error?: string };
+    if (resolveError) {
+      result = { ok: false, error: resolveError };
+    } else {
+      result = await sendTelegramMessage({ message: text, chatId });
+    }
+
     if (result.ok) {
       sent++;
       await sb

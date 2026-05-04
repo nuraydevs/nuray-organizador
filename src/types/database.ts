@@ -49,6 +49,8 @@ export type ReminderRelatedType =
   | "project"
   | "custom";
 
+export type NotificationTargetType = "individual" | "team";
+
 export interface DbBase {
   id: string;
   created_at: string;
@@ -130,8 +132,18 @@ export interface Reminder extends DbBase {
   status: ReminderStatus;
   related_type: ReminderRelatedType | null;
   related_id: string | null;
+  notification_target_id: string | null;
   telegram_sent_at: string | null;
   error_message: string | null;
+}
+
+export interface NotificationTarget extends DbBase {
+  name: string;
+  type: NotificationTargetType;
+  telegram_chat_id: string;
+  is_default: boolean;
+  is_active: boolean;
+  notes: string | null;
 }
 
 export interface AppSetting extends DbBase {

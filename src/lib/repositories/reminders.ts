@@ -23,6 +23,7 @@ export async function createReminder(input: Partial<Reminder>): Promise<Reminder
     status: input.status ?? "scheduled",
     related_type: input.related_type ?? null,
     related_id: input.related_id ?? null,
+    notification_target_id: input.notification_target_id ?? null,
   };
   const { data, error } = await sb.from(TABLE).insert(payload).select().single();
   if (error) throw error;

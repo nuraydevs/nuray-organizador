@@ -114,7 +114,70 @@ Vercel Cron no permite cabeceras, así que llama al endpoint vía query param
 añadiendo el path completo con `?secret=...` en la propiedad `path`. El
 endpoint acepta ambas formas.
 
-## 7. Depurar errores
+## 7. Múltiples destinatarios (individuales y equipos)
+
+A partir de la v0.2 la app soporta enviar cada recordatorio a un destinatario
+concreto en lugar de al `TELEGRAM_CHAT_ID` global. La gestión está en
+**Recordatorios → Destinatarios**.
+
+### Por qué chat_id y no teléfono
+
+Telegram Bot API no permite enviar mensajes por número de teléfono. Sólo por
+`chat_id`. Cada persona y cada grupo tienen su propio `chat_id`, y un bot sólo
+puede escribir a un usuario después de que ese usuario haya iniciado el chat.
+
+### Añadir un destinatario individual (Armando, Álvaro, …)
+
+Para cada persona:
+
+1. Que abra el bot: <https://t.me/nurirecordatoriosbot> y pulse **Start**
+   (o envíe `/start`).
+2. Opcional, para identificarlo en `getUpdates`: que escriba algo como
+   `Hola soy Armando`.
+3. Tú, con el token del bot, abres en el navegador:
+   ```
+   https://api.telegram.org/bot<TOKEN>/getUpdates
+   ```
+4. En el JSON, busca el bloque correspondiente y copia
+   `result[N].message.chat.id`. Es un número positivo (ej. `123456789`).
+5. En la app, **Recordatorios → Destinatarios → Nuevo destinatario**:
+   - Nombre: `Armando`
+   - Tipo: `Individual`
+   - chat_id: el número copiado
+6. Guardar. A partir de ahí ese destinatario aparece en el select **Enviar a**
+   al crear cualquier recordatorio Telegram.
+
+> El `chat_id` no es el teléfono. Aunque la persona tenga el número conocido,
+> Telegram entrega los mensajes por chat_id, así que es lo único que se guarda.
+
+### Añadir un destinatario de equipo (grupo)
+
+1. Crea un grupo en Telegram con las personas del equipo.
+2. Añade `@nurirecordatoriosbot` al grupo.
+3. Envía un mensaje cualquiera en el grupo (necesario para que el bot reciba
+   el update del grupo).
+4. En `https://api.telegram.org/bot<TOKEN>/getUpdates` busca el bloque del
+   grupo. El `chat.id` aquí es **negativo** (ej. `-1001234567890` para
+   supergrupos).
+5. En la app, **Nuevo destinatario** con tipo `Equipo` y ese chat_id.
+
+Cuando un recordatorio apunte a ese destinatario, el bot escribe en el grupo y
+todos los miembros ven el mensaje.
+
+### Cómo se resuelve el destinatario al enviar
+
+Lógica del endpoint `/api/reminders/send-due`:
+
+1. Si el recordatorio tiene `notification_target_id` → usa el `telegram_chat_id`
+   de ese destinatario.
+2. Si el destinatario está inactivo → marca el recordatorio como `failed`
+   con error `Destinatario inactivo`.
+3. Si no tiene target → cae al `TELEGRAM_CHAT_ID` global del entorno (modo
+   compatibilidad con la primera versión).
+4. Si ni hay target ni hay variable global → marca `failed` con
+   `TELEGRAM_CHAT_ID no configurado`.
+
+## 8. Depurar errores
 
 - **`unauthorized`**: el secret enviado no coincide con `REMINDER_CRON_SECRET`,
   o la variable no está definida en el server.

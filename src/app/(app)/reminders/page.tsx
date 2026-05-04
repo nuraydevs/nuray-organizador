@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCcw, Bell, BellOff, BellRing } from "lucide-react";
+import { Plus, RefreshCcw, Bell, BellOff, BellRing, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,6 +9,7 @@ import { PageLoader } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { ReminderEditor } from "@/components/reminders/ReminderEditor";
+import { TargetsManager } from "@/components/reminders/TargetsManager";
 import {
   listReminders,
   retryReminder,
@@ -33,6 +34,7 @@ export default function RemindersPage() {
   const [tab, setTab] = useState<ReminderStatus | "all">("scheduled");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Reminder | null>(null);
+  const [targetsOpen, setTargetsOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -105,6 +107,9 @@ export default function RemindersPage() {
         description="Avisos en la app o por Telegram."
         actions={
           <>
+            <Button variant="outline" onClick={() => setTargetsOpen(true)}>
+              <Users size={14} /> Destinatarios
+            </Button>
             <Button variant="outline" onClick={load}>
               <RefreshCcw size={14} /> Refrescar
             </Button>
@@ -231,6 +236,8 @@ export default function RemindersPage() {
         onSaved={onSaved}
         onDeleted={onDeleted}
       />
+
+      <TargetsManager open={targetsOpen} onClose={() => setTargetsOpen(false)} />
     </>
   );
 }

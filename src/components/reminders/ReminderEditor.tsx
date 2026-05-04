@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import type {
+  NotificationTarget,
   Reminder,
   ReminderChannel,
   ReminderRelatedType,
@@ -15,6 +16,7 @@ import {
   deleteReminder,
   updateReminder,
 } from "@/lib/repositories/reminders";
+import { listTargets } from "@/lib/repositories/notificationTargets";
 import { fromInputDateTime, toInputDateTime } from "@/lib/utils/dates";
 
 const RELATED_TYPES: { value: ReminderRelatedType; label: string }[] = [
@@ -46,6 +48,8 @@ export function ReminderEditor({
   const [remindAt, setRemindAt] = useState("");
   const [channel, setChannel] = useState<ReminderChannel>("app");
   const [relatedType, setRelatedType] = useState<ReminderRelatedType>("custom");
+  const [targetId, setTargetId] = useState<string>("");
+  const [targets, setTargets] = useState<NotificationTarget[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -58,7 +62,19 @@ export function ReminderEditor({
     setRelatedType(
       (reminder?.related_type ?? defaults?.related_type ?? "custom") as ReminderRelatedType,
     );
+    setTargetId(reminder?.notification_target_id ?? defaults?.notification_target_id ?? "");
     setConfirmDelete(false);
+    listTargets(true)
+      .then((ts) => {
+        setTargets(ts);
+        // If creating a new reminder and no target selected, prefer the default
+        if (!reminder && !targetId) {
+          const def = ts.find((t) => t.is_default);
+          if (def) setTargetId(def.id);
+        }
+      })
+      .catch(() => setTargets([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reminder, defaults]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -82,6 +98,7 @@ export function ReminderEditor({
         channel,
         related_type: relatedType,
         related_id: reminder?.related_id ?? defaults?.related_id ?? null,
+        notification_target_id: targetId || null,
         // when re-saving, keep status; for new, default to scheduled
         status: reminder?.status ?? "scheduled",
       };
@@ -204,6 +221,31 @@ export function ReminderEditor({
             </Select>
           </Field>
         </div>
+        {channel === "telegram" ? (
+          <Field
+            label="Enviar a"
+            htmlFor="r-target"
+            hint={
+              targets.length === 0
+                ? "Sin destinatarios. Se usará TELEGRAM_CHAT_ID global."
+                : undefined
+            }
+          >
+            <Select
+              id="r-target"
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+            >
+              <option value="">— Global (TELEGRAM_CHAT_ID) —</option>
+              {targets.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} · {t.type === "team" ? "equipo" : "individual"}
+                  {t.is_default ? " · por defecto" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         <Field label="Relacionado con" htmlFor="r-rel">
           <Select
             id="r-rel"
