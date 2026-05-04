@@ -107,12 +107,16 @@ Vercel limita los cron jobs a uno al día, lo cual no es útil para
 recordatorios. El endpoint `/api/reminders/send-due` sigue funcionando — lo que
 cambia es quién lo llama:
 
-- **Hobby**: programa un job externo (cron-job.org, GitHub Actions, UptimeRobot)
-  que haga GET a `/api/reminders/send-due?secret=REMINDER_CRON_SECRET` cada
-  5–10 minutos.
-- **Pro**: vuelve a declarar el cron en `vercel.json`.
+- **Hobby**: programa un job externo (recomendado **cron-job.org**, gratis)
+  que haga `POST` o `GET` a
+  `/api/reminders/send-due?secret=<REMINDER_CRON_SECRET>` cada 5 minutos.
+  Timeout 30s, success = HTTP 200.
+- **Pro**: vuelve a declarar el cron en `vercel.json` con el secret en el
+  `path`.
 
-Detalle completo en [`docs/TELEGRAM_SETUP.md`](docs/TELEGRAM_SETUP.md).
+El endpoint acepta `GET` y `POST`; ambos exigen `secret` válido (sin él,
+HTTP 401). Detalle paso a paso en
+[`docs/TELEGRAM_SETUP.md`](docs/TELEGRAM_SETUP.md).
 
 ## Acceso interno
 

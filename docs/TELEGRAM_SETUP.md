@@ -79,24 +79,57 @@ Pasos para probar de verdad:
 
 ## 6. Programar el envío
 
-El endpoint `/api/reminders/send-due` está siempre disponible y acepta el
-secreto por header (`Authorization: Bearer TU_SECRET`) o por query param
-(`?secret=TU_SECRET`). Lo que cambia es **quién lo llama de forma periódica**.
+El endpoint `/api/reminders/send-due` está siempre disponible.
+
+**Métodos**: acepta `GET` y `POST` indistintamente. El comportamiento es
+idéntico: procesa los recordatorios `status=scheduled, channel=telegram,
+remind_at <= now()` y devuelve JSON.
+
+**Autenticación**: en cada llamada hay que pasar el secret de una de estas
+dos formas:
+
+- Header: `Authorization: Bearer <REMINDER_CRON_SECRET>`
+- Query param: `?secret=<REMINDER_CRON_SECRET>`
+
+Sin secret válido devuelve `HTTP 401 {"error":"unauthorized"}`.
+
+**Respuesta** (HTTP 200): `{"processed":N,"sent":X,"failed":Y}`.
 
 ### Vercel Hobby (plan gratuito) — sin cron sub-diario
 
 El plan Hobby de Vercel limita los cron jobs a **uno al día como máximo**.
 Por eso el `vercel.json` de este proyecto está vacío (`{}`): el cron no se
-declara en Vercel. Si despliegas en Hobby tienes tres caminos:
+declara en Vercel.
 
-1. **cron-job.org** (gratis): crea un job que haga GET a
-   `https://TU-APP.vercel.app/api/reminders/send-due?secret=TU_SECRET`
-   cada 5–10 minutos. Resultado equivalente al cron de Vercel.
-2. **GitHub Actions scheduled workflow**: añade un workflow `cron: '*/5 * * * *'`
-   con un `curl` al endpoint. Recuerda guardar `REMINDER_CRON_SECRET` como
-   secret del repo, nunca en el yaml.
-3. **UptimeRobot** (gratis para 5 min de intervalo): apunta un monitor HTTP
-   GET al endpoint con la query del secret.
+#### Recomendado: cron-job.org
+
+1. Regístrate en <https://cron-job.org/> (gratis, basta email).
+2. **Create cronjob**:
+   - **Title**: `Nuray reminders`
+   - **URL**: `https://nuray-organizador.vercel.app/api/reminders/send-due?secret=<REMINDER_CRON_SECRET>`
+   - **Schedule**: every 5 minutes (preset).
+   - **Request method**: `POST` o `GET` (cualquiera funciona; preferir `POST` por
+     semántica — está cambiando estado en la base de datos).
+   - **Request timeout**: `30` segundos.
+   - **Notifications** (opcional): activar "Send notification on failure".
+   - **Save**.
+3. Pulsa **Run now** una vez para validar. Espera HTTP 200 con
+   `{"processed":N,"sent":...,"failed":...}`.
+4. Listo. Cada 5 min cron-job.org llama al endpoint y los recordatorios
+   `scheduled+telegram` con `remind_at <= now()` se procesan.
+
+> **Importante**: el `REMINDER_CRON_SECRET` va en la URL como query param. No lo
+> compartas. cron-job.org guarda la URL cifrada en su lado. Si necesitas
+> rotarlo, regenera el secret en `.env.local` + Vercel y actualiza la URL en
+> cron-job.org.
+
+#### Alternativas equivalentes
+
+- **GitHub Actions scheduled workflow**: workflow con `cron: '*/5 * * * *'` que
+  haga `curl` al endpoint. Guarda `REMINDER_CRON_SECRET` como secret del repo,
+  nunca en el yaml.
+- **UptimeRobot** (gratis para 5 min de intervalo): apunta un monitor HTTP
+  `GET` al endpoint con la query del secret.
 
 ### Vercel Pro
 
@@ -105,14 +138,43 @@ Restaura el cron en `vercel.json`:
 ```json
 {
   "crons": [
-    { "path": "/api/reminders/send-due", "schedule": "*/5 * * * *" }
+    { "path": "/api/reminders/send-due?secret=TU_SECRET", "schedule": "*/5 * * * *" }
   ]
 }
 ```
 
-Vercel Cron no permite cabeceras, así que llama al endpoint vía query param
-añadiendo el path completo con `?secret=...` en la propiedad `path`. El
-endpoint acepta ambas formas.
+Vercel Cron no permite cabeceras, así que mete el secret en el `path` como
+query. El endpoint acepta ambas formas.
+
+### Cómo probar que el cron funciona (smoke test 2 minutos)
+
+1. En la app: **Recordatorios → Nuevo recordatorio**:
+   - Título: `Test cron`
+   - Canal: `Telegram`
+   - Enviar a: tu destinatario individual
+   - Fecha y hora: en 2 minutos desde ahora
+   - Crear.
+2. Espera el siguiente tick de cron-job.org (máx. 5 min).
+3. Confirma:
+   - Mensaje recibido en Telegram.
+   - Recordatorio aparece en la pestaña **Enviados** de la app con
+     `telegram_sent_at` poblado.
+   - cron-job.org muestra "Last execution: success".
+4. Si no llega:
+   - Revisa **Recordatorios → Fallidos** en la app: el `error_message` indica
+     la causa exacta.
+   - Revisa el log de cron-job.org para ver si el HTTP fue 200 / 401 / 500.
+
+### Disparo manual (sin cron) desde tu máquina
+
+Si necesitas procesar la cola ahora mismo sin esperar al cron:
+
+```bash
+# El secret se lee directamente de tu .env.local sin imprimirlo
+SECRET=$(grep '^REMINDER_CRON_SECRET=' "$HOME/Desktop/Nuray organización/.env.local" | cut -d= -f2)
+curl -X POST "https://nuray-organizador.vercel.app/api/reminders/send-due?secret=$SECRET"
+unset SECRET
+```
 
 ## 7. Múltiples destinatarios (individuales y equipos)
 
