@@ -23,13 +23,20 @@ Texto o nota de voz rápida que se guardan como **captura pendiente** sin
 estructurarla todavía como tarea/cliente/proyecto. Después se procesa desde
 `/inbox`.
 
-- Audio se sube al bucket de Supabase Storage `quick-captures` (público,
-  límite 25 MB, audio mime types). El `audio_url` resultante se reproduce
-  con un `<audio>` HTML5 desde el inbox.
-- No hay transcripción automática. La intención es capturar primero y
-  procesar a mano cuando haya tiempo.
+- **Texto**: se guarda directamente como `type='text'`.
+- **Audio**: se graba con MediaRecorder, se transcribe vía
+  `POST /api/transcribe` (Whisper, server-side) y se guarda la
+  **transcripción** como captura de texto. El audio NO se sube a
+  Storage por defecto.
+  - Si marcas **"Guardar audio también"** antes de pulsar Guardar
+    captura, sí se sube al bucket `quick-captures` y la fila se guarda
+    con `type='audio'` + `audio_url` + `audio_path` + `content` (la
+    transcripción).
 - Borrar una captura de audio elimina también el archivo del bucket
   (best-effort: si falla, queda documentado en el toast).
+- `OPENAI_API_KEY` debe estar configurada en server-side (`.env.local`
+  en local, Vercel env vars en producción). Si falta, el botón
+  "Transcribir" devuelve un error claro y no rompe la app.
 
 ## Stack
 
@@ -77,6 +84,7 @@ NURAY_ACCESS_CODE=                # código compartido para entrar a la app
 TELEGRAM_BOT_TOKEN=               # opcional, sólo si usas recordatorios Telegram
 TELEGRAM_CHAT_ID=                 # opcional, chat o grupo destino
 REMINDER_CRON_SECRET=             # secreto para el cron job
+OPENAI_API_KEY=                   # opcional, para transcribir audio del Inbox
 ```
 
 ## Telegram
@@ -113,6 +121,7 @@ comando, y comprueba que el mensaje llega.
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_CHAT_ID`
    - `REMINDER_CRON_SECRET`
+   - `OPENAI_API_KEY` (opcional, sólo si usas transcripción de audio)
 4. Deploy.
 
 ### Cron de recordatorios

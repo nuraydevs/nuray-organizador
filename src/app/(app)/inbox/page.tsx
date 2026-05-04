@@ -179,9 +179,13 @@ export default function InboxPage() {
                     </span>
                   </div>
 
-                  {c.type === "text" && c.content ? (
+                  {c.content ? (
                     <p className="text-sm whitespace-pre-wrap mt-2 break-words">
                       {c.content}
+                    </p>
+                  ) : c.type === "audio" ? (
+                    <p className="text-sm italic text-muted-foreground mt-2">
+                      Audio sin transcripción
                     </p>
                   ) : null}
 
@@ -193,11 +197,6 @@ export default function InboxPage() {
                         preload="none"
                         className="w-full"
                       />
-                      {c.content ? (
-                        <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap">
-                          {c.content}
-                        </p>
-                      ) : null}
                     </div>
                   ) : null}
                 </div>

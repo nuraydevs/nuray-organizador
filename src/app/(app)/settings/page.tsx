@@ -15,6 +15,7 @@ interface StatusFlags {
   telegramBotToken: boolean;
   telegramChatId: boolean;
   reminderCronSecret: boolean;
+  openaiApiKey: boolean;
 }
 
 export default function SettingsPage() {
@@ -80,6 +81,21 @@ export default function SettingsPage() {
               Vercel Cron llamará a <code>/api/reminders/send-due</code> cada 5
               minutos. Consulta <code>docs/TELEGRAM_SETUP.md</code> para ver la
               configuración.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>OpenAI (transcripción)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Row ok={status?.openaiApiKey ?? false} label="OPENAI_API_KEY" />
+            <p className="text-xs text-muted-foreground pt-2">
+              Se usa solo en el endpoint <code>/api/transcribe</code> para
+              convertir notas de voz del Inbox en texto. Si no está
+              configurada, el modo audio mostrará un error claro al pulsar
+              Transcribir.
             </p>
           </CardContent>
         </Card>

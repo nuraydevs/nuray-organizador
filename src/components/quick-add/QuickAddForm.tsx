@@ -36,6 +36,9 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
   // capture
   const [captureText, setCaptureText] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [transcript, setTranscript] = useState("");
+  const [transcribing, setTranscribing] = useState(false);
+  const [keepAudio, setKeepAudio] = useState(false);
 
   // task / reminder shared
   const [title, setTitle] = useState("");
@@ -96,19 +99,24 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
     }
 
     if (mode === "audio") {
-      if (!audioBlob) {
-        toast.error("Graba un audio antes de guardar");
+      const text = transcript.trim();
+      if (!text) {
+        toast.error("Transcribe el audio antes de guardar");
         return;
       }
       setSubmitting(true);
       try {
-        const { audioUrl, audioPath } = await uploadAudioBlob(audioBlob);
-        await createAudioCapture({ audioUrl, audioPath });
-        toast.success("Audio guardado");
+        if (keepAudio && audioBlob) {
+          const { audioUrl, audioPath } = await uploadAudioBlob(audioBlob);
+          await createAudioCapture({ audioUrl, audioPath, content: text });
+        } else {
+          await createTextCapture(text);
+        }
+        toast.success("Captura guardada");
         notifyCreated();
         onDone();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al guardar audio");
+        toast.error(err instanceof Error ? err.message : "Error al guardar");
       } finally {
         setSubmitting(false);
       }
@@ -154,10 +162,39 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
   }
 
   function changeMode(next: Mode) {
-    if (submitting) return;
+    if (submitting || transcribing) return;
     setMode(next);
-    // Reset transient state but keep generic text/title across modes if helpful
     setAudioBlob(null);
+    setTranscript("");
+    setKeepAudio(false);
+  }
+
+  async function transcribe() {
+    if (!audioBlob || transcribing) return;
+    setTranscribing(true);
+    try {
+      const form = new FormData();
+      form.append("file", audioBlob, "audio.webm");
+      const res = await fetch("/api/transcribe", { method: "POST", body: form });
+      const json = (await res.json().catch(() => ({}))) as {
+        text?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(json?.error ?? `Error al transcribir (${res.status})`);
+        return;
+      }
+      const text = (json.text ?? "").trim();
+      if (!text) {
+        toast.error("No se ha podido extraer texto del audio");
+        return;
+      }
+      setTranscript(text);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al transcribir");
+    } finally {
+      setTranscribing(false);
+    }
   }
 
   return (
@@ -205,16 +242,70 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
       ) : null}
 
       {mode === "audio" ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Graba una nota de voz. Se guarda como captura para procesar más tarde.
+            Graba una nota de voz. Se transcribirá a texto. El audio no se
+            guarda salvo que lo marques explícitamente.
           </p>
           <AudioRecorder
-            onReady={(blob) => setAudioBlob(blob)}
-            onReset={() => setAudioBlob(null)}
-            disabled={submitting}
+            onReady={(blob) => {
+              setAudioBlob(blob);
+              setTranscript("");
+            }}
+            onReset={() => {
+              setAudioBlob(null);
+              setTranscript("");
+              setKeepAudio(false);
+            }}
+            disabled={submitting || transcribing}
           />
-          <AudioUploadIndicator uploading={submitting} />
+
+          {audioBlob && !transcript ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={transcribe}
+              loading={transcribing}
+              className="w-full h-11 text-sm"
+            >
+              {transcribing ? "Transcribiendo..." : "Transcribir"}
+            </Button>
+          ) : null}
+
+          {transcript ? (
+            <>
+              <Field
+                label="Transcripción"
+                htmlFor="qa-transcript"
+                required
+                hint="Edita el texto si hace falta antes de guardar."
+              >
+                <Textarea
+                  id="qa-transcript"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  className="min-h-[120px]"
+                  maxLength={5000}
+                />
+              </Field>
+              <label className="inline-flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={keepAudio}
+                  onChange={(e) => setKeepAudio(e.target.checked)}
+                  className="h-4 w-4 rounded border-border mt-0.5"
+                />
+                <span>
+                  Guardar audio también
+                  <span className="block text-[11px] text-muted-foreground/80">
+                    Por defecto solo se guarda la transcripción.
+                  </span>
+                </span>
+              </label>
+            </>
+          ) : null}
+
+          <AudioUploadIndicator uploading={submitting && keepAudio} />
         </div>
       ) : null}
 
@@ -317,14 +408,13 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
           type="submit"
           loading={submitting}
           disabled={
+            transcribing ||
             (mode === "text" && !captureText.trim()) ||
-            (mode === "audio" && !audioBlob)
+            (mode === "audio" && !transcript.trim())
           }
         >
-          {mode === "text"
+          {mode === "text" || mode === "audio"
             ? "Guardar captura"
-            : mode === "audio"
-            ? "Guardar audio"
             : mode === "task"
             ? "Crear tarea"
             : "Crear recordatorio"}

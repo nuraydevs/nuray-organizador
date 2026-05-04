@@ -15,5 +15,6 @@ export async function GET() {
     telegramBotToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
     telegramChatId: Boolean(process.env.TELEGRAM_CHAT_ID),
     reminderCronSecret: Boolean(process.env.REMINDER_CRON_SECRET),
+    openaiApiKey: Boolean(process.env.OPENAI_API_KEY),
   });
 }
