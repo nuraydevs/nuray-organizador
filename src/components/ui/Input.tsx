@@ -3,8 +3,10 @@
 import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
+// 16px on mobile (text-base) prevents iOS Safari focus-zoom; 14px from sm
+// up keeps the dense desktop look.
 const baseField =
-  "w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/15 focus:border-foreground/30 disabled:opacity-60 disabled:cursor-not-allowed";
+  "w-full rounded-md border border-border bg-white px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/15 focus:border-foreground/30 disabled:opacity-60 disabled:cursor-not-allowed";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {

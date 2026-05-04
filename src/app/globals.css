@@ -9,6 +9,9 @@
 html,
 body {
   height: 100%;
+  /* Block accidental horizontal scroll/jitter on mobile when modals or wide
+     content briefly exceed the viewport. The vertical axis remains scrollable. */
+  overflow-x: hidden;
 }
 
 body {
@@ -19,6 +22,21 @@ body {
     Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/*
+  iOS Safari focus-zoom prevention.
+  Any form control with a computed font-size below 16px triggers an
+  unwanted "smart zoom" when the user taps it. The base Input component
+  already declares text-base on mobile, but this safety net catches
+  any third-party or future input we might forget.
+*/
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 * {
