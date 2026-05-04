@@ -77,9 +77,30 @@ Pasos para probar de verdad:
 4. El mensaje debe llegar a tu chat de Telegram.
 5. En la app, el recordatorio aparece como **enviado**.
 
-## 6. Vercel Cron
+## 6. Programar el envío
 
-`vercel.json` ya está configurado para llamar al endpoint cada 5 minutos:
+El endpoint `/api/reminders/send-due` está siempre disponible y acepta el
+secreto por header (`Authorization: Bearer TU_SECRET`) o por query param
+(`?secret=TU_SECRET`). Lo que cambia es **quién lo llama de forma periódica**.
+
+### Vercel Hobby (plan gratuito) — sin cron sub-diario
+
+El plan Hobby de Vercel limita los cron jobs a **uno al día como máximo**.
+Por eso el `vercel.json` de este proyecto está vacío (`{}`): el cron no se
+declara en Vercel. Si despliegas en Hobby tienes tres caminos:
+
+1. **cron-job.org** (gratis): crea un job que haga GET a
+   `https://TU-APP.vercel.app/api/reminders/send-due?secret=TU_SECRET`
+   cada 5–10 minutos. Resultado equivalente al cron de Vercel.
+2. **GitHub Actions scheduled workflow**: añade un workflow `cron: '*/5 * * * *'`
+   con un `curl` al endpoint. Recuerda guardar `REMINDER_CRON_SECRET` como
+   secret del repo, nunca en el yaml.
+3. **UptimeRobot** (gratis para 5 min de intervalo): apunta un monitor HTTP
+   GET al endpoint con la query del secret.
+
+### Vercel Pro
+
+Restaura el cron en `vercel.json`:
 
 ```json
 {
@@ -89,14 +110,9 @@ Pasos para probar de verdad:
 }
 ```
 
-Como Vercel Cron no permite cabeceras personalizadas, hay dos opciones:
-
-- **Cambiar el `path`** al formato con query param:
-  `/api/reminders/send-due?secret=TU_SECRET`. Es lo más sencillo.
-- O configurar un **schedule externo** (cron-job.org, GitHub Actions, etc.) que
-  envíe el header `Authorization: Bearer TU_SECRET`.
-
-El endpoint acepta ambas formas.
+Vercel Cron no permite cabeceras, así que llama al endpoint vía query param
+añadiendo el path completo con `?secret=...` en la propiedad `path`. El
+endpoint acepta ambas formas.
 
 ## 7. Depurar errores
 

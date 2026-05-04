@@ -100,14 +100,19 @@ comando, y comprueba que el mensaje llega.
    - `REMINDER_CRON_SECRET`
 4. Deploy.
 
-Vercel Cron está configurado en [`vercel.json`](vercel.json) y llamará a
-`/api/reminders/send-due` cada 5 minutos. El endpoint acepta el secreto por
-header (`Authorization: Bearer ...`) o query param (`?secret=...`); como Vercel
-Cron actualmente no permite headers personalizados, lo más cómodo es:
+### Cron de recordatorios
 
-- Mantener `REMINDER_CRON_SECRET` configurado.
-- Si quieres usar el query param, configura el cron desde la UI de Vercel
-  apuntando a `/api/reminders/send-due?secret=TUSECRETO`.
+`vercel.json` está intencionadamente vacío (`{}`) porque el plan **Hobby** de
+Vercel limita los cron jobs a uno al día, lo cual no es útil para
+recordatorios. El endpoint `/api/reminders/send-due` sigue funcionando — lo que
+cambia es quién lo llama:
+
+- **Hobby**: programa un job externo (cron-job.org, GitHub Actions, UptimeRobot)
+  que haga GET a `/api/reminders/send-due?secret=REMINDER_CRON_SECRET` cada
+  5–10 minutos.
+- **Pro**: vuelve a declarar el cron en `vercel.json`.
+
+Detalle completo en [`docs/TELEGRAM_SETUP.md`](docs/TELEGRAM_SETUP.md).
 
 ## Acceso interno
 
