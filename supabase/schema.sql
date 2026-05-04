@@ -47,8 +47,7 @@ create table if not exists public.clients (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_clients_updated_at on public.clients;
-create trigger trg_clients_updated_at before update on public.clients
+create or replace trigger trg_clients_updated_at before update on public.clients
 for each row execute function set_updated_at();
 
 -- =============================================================
@@ -71,8 +70,7 @@ create table if not exists public.projects (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_projects_updated_at on public.projects;
-create trigger trg_projects_updated_at before update on public.projects
+create or replace trigger trg_projects_updated_at before update on public.projects
 for each row execute function set_updated_at();
 
 -- =============================================================
@@ -96,8 +94,7 @@ create table if not exists public.reminders (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_reminders_updated_at on public.reminders;
-create trigger trg_reminders_updated_at before update on public.reminders
+create or replace trigger trg_reminders_updated_at before update on public.reminders
 for each row execute function set_updated_at();
 
 create index if not exists idx_reminders_due
@@ -123,8 +120,7 @@ create table if not exists public.tasks (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_tasks_updated_at on public.tasks;
-create trigger trg_tasks_updated_at before update on public.tasks
+create or replace trigger trg_tasks_updated_at before update on public.tasks
 for each row execute function set_updated_at();
 
 create index if not exists idx_tasks_status on public.tasks (status);
@@ -145,8 +141,7 @@ create table if not exists public.task_checklist_items (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_checklist_updated_at on public.task_checklist_items;
-create trigger trg_checklist_updated_at before update on public.task_checklist_items
+create or replace trigger trg_checklist_updated_at before update on public.task_checklist_items
 for each row execute function set_updated_at();
 
 create index if not exists idx_checklist_task on public.task_checklist_items (task_id);
@@ -171,8 +166,7 @@ create table if not exists public.calendar_events (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_events_updated_at on public.calendar_events;
-create trigger trg_events_updated_at before update on public.calendar_events
+create or replace trigger trg_events_updated_at before update on public.calendar_events
 for each row execute function set_updated_at();
 
 create index if not exists idx_events_start on public.calendar_events (start_at);
@@ -188,8 +182,7 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 
-drop trigger if exists trg_settings_updated_at on public.app_settings;
-create trigger trg_settings_updated_at before update on public.app_settings
+create or replace trigger trg_settings_updated_at before update on public.app_settings
 for each row execute function set_updated_at();
 
 -- =============================================================
