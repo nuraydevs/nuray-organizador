@@ -55,27 +55,48 @@ export function ReminderEditor({
 
   useEffect(() => {
     if (!open) return;
+    const initialTargetId =
+      reminder?.notification_target_id ?? defaults?.notification_target_id ?? "";
     setTitle(reminder?.title ?? defaults?.title ?? "");
     setMessage(reminder?.message ?? defaults?.message ?? "");
     setRemindAt(toInputDateTime(reminder?.remind_at ?? defaults?.remind_at));
-    setChannel(reminder?.channel ?? defaults?.channel ?? "app");
     setRelatedType(
       (reminder?.related_type ?? defaults?.related_type ?? "custom") as ReminderRelatedType,
     );
-    setTargetId(reminder?.notification_target_id ?? defaults?.notification_target_id ?? "");
+    setTargetId(initialTargetId);
     setConfirmDelete(false);
     listTargets(true)
       .then((ts) => {
         setTargets(ts);
-        // If creating a new reminder and no target selected, prefer the default
-        if (!reminder && !targetId) {
+        if (!reminder) {
           const def = ts.find((t) => t.is_default);
-          if (def) setTargetId(def.id);
+          // Default channel for new reminders: telegram if there are targets
+          // available (intent is almost always Telegram in this app), otherwise app.
+          const initialChannel: ReminderChannel =
+            (defaults?.channel as ReminderChannel | undefined) ??
+            (ts.length > 0 ? "telegram" : "app");
+          setChannel(initialChannel);
+          if (!initialTargetId && def) setTargetId(def.id);
+        } else {
+          setChannel(reminder.channel ?? "app");
         }
       })
-      .catch(() => setTargets([]));
+      .catch(() => {
+        setTargets([]);
+        setChannel(reminder?.channel ?? defaults?.channel ?? "app");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reminder, defaults]);
+
+  // Auto-coerce channel to telegram when a target is picked (UX safety net so a
+  // user cannot accidentally save channel="app" with a target chosen, which the
+  // cron would silently ignore).
+  function onPickTarget(value: string) {
+    setTargetId(value);
+    if (value && channel !== "telegram") setChannel("telegram");
+  }
+
+  const selectedTarget = targets.find((t) => t.id === targetId) ?? null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,13 +110,23 @@ export function ReminderEditor({
       toast.error("Fecha de recordatorio no válida");
       return;
     }
+    if (channel === "telegram" && targetId) {
+      const t = targets.find((x) => x.id === targetId);
+      if (!t || !t.is_active) {
+        toast.error("El destinatario seleccionado no está activo");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
+      // If a target is selected, channel must be telegram. Coerce here as a
+      // backstop in case state got out of sync.
+      const finalChannel: ReminderChannel = targetId ? "telegram" : channel;
       const payload: Partial<Reminder> = {
         title,
         message: message.trim() || null,
         remind_at: remindIso,
-        channel,
+        channel: finalChannel,
         related_type: relatedType,
         related_id: reminder?.related_id ?? defaults?.related_id ?? null,
         notification_target_id: targetId || null,
@@ -229,13 +260,15 @@ export function ReminderEditor({
             hint={
               targets.length === 0
                 ? "Sin destinatarios. Se usará TELEGRAM_CHAT_ID global."
+                : !targetId
+                ? "Global usa el chat_id por defecto del sistema."
                 : undefined
             }
           >
             <Select
               id="r-target"
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
+              onChange={(e) => onPickTarget(e.target.value)}
             >
               <option value="">— Global (TELEGRAM_CHAT_ID) —</option>
               {targets.map((t) => (
@@ -245,6 +278,16 @@ export function ReminderEditor({
                 </option>
               ))}
             </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Se enviará por Telegram a:{" "}
+              <span className="font-medium text-foreground">
+                {selectedTarget
+                  ? `${selectedTarget.name}${
+                      selectedTarget.type === "team" ? " (equipo)" : ""
+                    }`
+                  : "Global"}
+              </span>
+            </p>
           </Field>
         ) : null}
         <Field label="Relacionado con" htmlFor="r-rel">

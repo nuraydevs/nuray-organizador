@@ -10,12 +10,13 @@ import { createTask } from "@/lib/repositories/tasks";
 import { createReminder } from "@/lib/repositories/reminders";
 import { listClients } from "@/lib/repositories/clients";
 import { listProjects } from "@/lib/repositories/projects";
+import { listTargets } from "@/lib/repositories/notificationTargets";
 import {
   createAudioCapture,
   createTextCapture,
   uploadAudioBlob,
 } from "@/lib/repositories/quickCaptures";
-import type { Client, Project, Priority } from "@/types/database";
+import type { Client, NotificationTarget, Project, Priority } from "@/types/database";
 import { fromInputDateTime } from "@/lib/utils/dates";
 import { AudioRecorder, AudioUploadIndicator } from "./AudioRecorder";
 import { cn } from "@/lib/utils/cn";
@@ -47,6 +48,8 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [channel, setChannel] = useState<"app" | "telegram">("app");
+  const [targetId, setTargetId] = useState<string>("");
+  const [targets, setTargets] = useState<NotificationTarget[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,10 +68,27 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
       .catch(() => {
         // silent: not essential for quick add
       });
+    if (mode === "reminder") {
+      listTargets(true)
+        .then((ts) => {
+          if (!alive) return;
+          setTargets(ts);
+          if (ts.length > 0) {
+            setChannel((c) => (c === "app" ? "telegram" : c));
+            setTargetId((cur) => cur || ts.find((t) => t.is_default)?.id || "");
+          }
+        })
+        .catch(() => setTargets([]));
+    }
     return () => {
       alive = false;
     };
   }, [mode]);
+
+  function onPickTarget(value: string) {
+    setTargetId(value);
+    if (value && channel !== "telegram") setChannel("telegram");
+  }
 
   function notifyCreated() {
     window.dispatchEvent(new CustomEvent("nuray:quick-add:created"));
@@ -144,11 +164,20 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
           setSubmitting(false);
           return;
         }
+        if (channel === "telegram" && targetId) {
+          const t = targets.find((x) => x.id === targetId);
+          if (!t || !t.is_active) {
+            toast.error("El destinatario seleccionado no está activo");
+            setSubmitting(false);
+            return;
+          }
+        }
         await createReminder({
           title,
           remind_at: fromInputDateTime(dueDate) ?? new Date().toISOString(),
           channel,
           related_type: "custom",
+          notification_target_id: targetId || null,
         });
         toast.success("Recordatorio creado");
       }
@@ -364,6 +393,34 @@ export function QuickAddForm({ onDone }: { onDone: () => void }) {
               />
             </Field>
           </div>
+
+          {mode === "reminder" && channel === "telegram" ? (
+            <Field
+              label="Enviar a"
+              htmlFor="qa-target"
+              hint={
+                targets.length === 0
+                  ? "Sin destinatarios. Se usará TELEGRAM_CHAT_ID global."
+                  : !targetId
+                  ? "Global usa el chat_id por defecto del sistema."
+                  : undefined
+              }
+            >
+              <Select
+                id="qa-target"
+                value={targetId}
+                onChange={(e) => onPickTarget(e.target.value)}
+              >
+                <option value="">— Global (TELEGRAM_CHAT_ID) —</option>
+                {targets.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} · {t.type === "team" ? "equipo" : "individual"}
+                    {t.is_default ? " · por defecto" : ""}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
 
           {mode === "task" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

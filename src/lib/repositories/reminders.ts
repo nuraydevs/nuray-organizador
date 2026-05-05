@@ -15,15 +15,20 @@ export async function listReminders(): Promise<Reminder[]> {
 
 export async function createReminder(input: Partial<Reminder>): Promise<Reminder> {
   const sb = getSupabaseBrowser();
+  const targetId = input.notification_target_id ?? null;
+  // If a notification target is set, the only meaningful channel is telegram.
+  // Coerce here as a backstop: the cron only picks up channel=telegram, so a
+  // reminder with a target but channel=app would be silently ignored forever.
+  const channel = targetId ? "telegram" : input.channel ?? "app";
   const payload = {
     title: input.title?.trim() ?? "",
     message: input.message ?? null,
     remind_at: input.remind_at ?? new Date().toISOString(),
-    channel: input.channel ?? "app",
+    channel,
     status: input.status ?? "scheduled",
     related_type: input.related_type ?? null,
     related_id: input.related_id ?? null,
-    notification_target_id: input.notification_target_id ?? null,
+    notification_target_id: targetId,
   };
   const { data, error } = await sb.from(TABLE).insert(payload).select().single();
   if (error) throw error;
@@ -35,9 +40,14 @@ export async function updateReminder(
   patch: Partial<Reminder>,
 ): Promise<Reminder> {
   const sb = getSupabaseBrowser();
+  // Same backstop on update: target implies telegram channel.
+  const finalPatch = { ...patch };
+  if ("notification_target_id" in finalPatch && finalPatch.notification_target_id) {
+    finalPatch.channel = "telegram";
+  }
   const { data, error } = await sb
     .from(TABLE)
-    .update(patch)
+    .update(finalPatch)
     .eq("id", id)
     .select()
     .single();

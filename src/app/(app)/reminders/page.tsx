@@ -15,7 +15,8 @@ import {
   retryReminder,
   updateReminder,
 } from "@/lib/repositories/reminders";
-import type { Reminder, ReminderStatus } from "@/types/database";
+import { listTargets } from "@/lib/repositories/notificationTargets";
+import type { NotificationTarget, Reminder, ReminderStatus } from "@/types/database";
 import { smartDateLabel } from "@/lib/utils/dates";
 
 const TABS: { value: ReminderStatus | "all"; label: string }[] = [
@@ -29,6 +30,7 @@ const TABS: { value: ReminderStatus | "all"; label: string }[] = [
 export default function RemindersPage() {
   const toast = useToast();
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [targets, setTargets] = useState<NotificationTarget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<ReminderStatus | "all">("scheduled");
@@ -39,14 +41,21 @@ export default function RemindersPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const r = await listReminders();
+      const [r, ts] = await Promise.all([listReminders(), listTargets()]);
       setReminders(r);
+      setTargets(ts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const targetsById = useMemo(() => {
+    const m = new Map<string, NotificationTarget>();
+    targets.forEach((t) => m.set(t.id, t));
+    return m;
+  }, [targets]);
 
   useEffect(() => {
     load();
@@ -161,6 +170,15 @@ export default function RemindersPage() {
           {filtered.map((r) => {
             const overdue =
               r.status === "scheduled" && new Date(r.remind_at).getTime() < Date.now();
+            const target = r.notification_target_id
+              ? targetsById.get(r.notification_target_id)
+              : null;
+            const recipientLabel =
+              r.channel === "telegram"
+                ? target
+                  ? `${target.name}${target.type === "team" ? " (equipo)" : ""}`
+                  : "Global"
+                : null;
             return (
               <div
                 key={r.id}
@@ -200,6 +218,7 @@ export default function RemindersPage() {
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     {smartDateLabel(r.remind_at)}
+                    {recipientLabel ? <span> · → {recipientLabel}</span> : null}
                     {r.message ? <span> · {r.message.slice(0, 80)}</span> : null}
                   </div>
                   {r.error_message ? (
