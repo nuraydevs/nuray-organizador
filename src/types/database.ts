@@ -29,6 +29,8 @@ export type PaymentStatus =
   | "paid"
   | "not_applicable";
 
+export type AnalyticsSyncStatus = "synced" | "failed";
+
 export type ProjectType = "agency" | "study" | "personal" | "internal";
 export type ProjectStatus = "active" | "paused" | "completed" | "archived";
 
@@ -77,6 +79,9 @@ export interface Client extends DbBase {
   notes: string | null;
   important_links: ImportantLink[] | null;
   payment_status: PaymentStatus;
+  analytics_sync_status: AnalyticsSyncStatus | null;
+  analytics_last_synced_at: string | null;
+  analytics_sync_error: string | null;
 }
 
 export interface ImportantLink {

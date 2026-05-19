@@ -2,6 +2,36 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { Client } from "@/types/database";
 
 const TABLE = "clients";
+const ANALYTICS_SYNC_ENDPOINT = "/api/integrations/nuray-analytics/client";
+
+async function requestNurayAnalyticsSync(clientId: string): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  try {
+    const res = await fetch(ANALYTICS_SYNC_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId }),
+    });
+
+    const json = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+    };
+
+    if (!res.ok || json.ok === false) {
+      console.error("[nuray-analytics] No se pudo sincronizar el cliente", {
+        clientId,
+        error: json.error ?? `HTTP ${res.status}`,
+      });
+    }
+  } catch (err) {
+    console.error("[nuray-analytics] No se pudo solicitar la sincronización", {
+      clientId,
+      error: err instanceof Error ? err.message : "Error desconocido",
+    });
+  }
+}
 
 export async function listClients(): Promise<Client[]> {
   const sb = getSupabaseBrowser();
@@ -42,7 +72,9 @@ export async function createClient(input: Partial<Client>): Promise<Client> {
   };
   const { data, error } = await sb.from(TABLE).insert(payload).select().single();
   if (error) throw error;
-  return data as Client;
+  const client = data as Client;
+  void requestNurayAnalyticsSync(client.id);
+  return client;
 }
 
 export async function updateClient(id: string, patch: Partial<Client>): Promise<Client> {
@@ -54,7 +86,9 @@ export async function updateClient(id: string, patch: Partial<Client>): Promise<
     .select()
     .single();
   if (error) throw error;
-  return data as Client;
+  const client = data as Client;
+  void requestNurayAnalyticsSync(client.id);
+  return client;
 }
 
 export async function deleteClient(id: string): Promise<void> {
