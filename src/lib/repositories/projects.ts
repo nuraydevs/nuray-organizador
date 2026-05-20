@@ -25,11 +25,14 @@ export async function createProject(input: Partial<Project>): Promise<Project> {
   const payload = {
     name: input.name?.trim() ?? "",
     description: input.description ?? null,
-    type: input.type ?? "personal",
+    type: input.type ?? "internal",
     status: input.status ?? "active",
     priority: input.priority ?? "medium",
+    client_id: input.client_id ?? null,
+    owner: input.owner ?? null,
     start_date: input.start_date ?? null,
-    end_date: input.end_date ?? null,
+    due_date: input.due_date ?? null,
+    estimated_value: input.estimated_value ?? null,
     notes: input.notes ?? null,
   };
   const { data, error } = await sb.from(TABLE).insert(payload).select().single();

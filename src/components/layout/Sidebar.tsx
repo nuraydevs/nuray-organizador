@@ -8,6 +8,7 @@ import {
   ListChecks,
   Users,
   FolderKanban,
+  Wallet,
   Bell,
   Settings,
   Inbox,
@@ -21,6 +22,7 @@ export const NAV_ITEMS = [
   { href: "/calendar", label: "Calendario", icon: Calendar },
   { href: "/clients", label: "Clientes", icon: Users },
   { href: "/projects", label: "Proyectos", icon: FolderKanban },
+  { href: "/finance", label: "Finanzas", icon: Wallet },
   { href: "/reminders", label: "Recordatorios", icon: Bell },
   { href: "/settings", label: "Configuración", icon: Settings },
 ];

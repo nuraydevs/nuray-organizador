@@ -14,7 +14,7 @@ import { listTasks, createTask } from "@/lib/repositories/tasks";
 import { listClients } from "@/lib/repositories/clients";
 import { listProjects } from "@/lib/repositories/projects";
 import type { Client, Project, Task, TaskStatus } from "@/types/database";
-import { TASK_STATUSES, PRIORITIES } from "@/types/app";
+import { TASK_STATUSES, PRIORITIES, TEAM_MEMBERS } from "@/types/app";
 
 type View = "list" | "kanban";
 
@@ -31,6 +31,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -70,13 +71,17 @@ export default function TasksPage() {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
       if (clientFilter !== "all" && t.client_id !== clientFilter) return false;
+      if (assigneeFilter !== "all") {
+        if (assigneeFilter === "unassigned" && t.assignee) return false;
+        if (assigneeFilter !== "unassigned" && t.assignee !== assigneeFilter) return false;
+      }
       if (q) {
         const blob = `${t.title} ${t.description ?? ""} ${t.tags?.join(" ") ?? ""}`.toLowerCase();
         if (!blob.includes(q)) return false;
       }
       return true;
     });
-  }, [tasks, search, statusFilter, priorityFilter, clientFilter]);
+  }, [tasks, search, statusFilter, priorityFilter, clientFilter, assigneeFilter]);
 
   const grouped = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
@@ -181,7 +186,7 @@ export default function TasksPage() {
         </Button>
       </form>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-4">
         <div className="relative col-span-2 lg:col-span-2">
           <Search
             size={14}
@@ -215,6 +220,15 @@ export default function TasksPage() {
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
+            </option>
+          ))}
+        </Select>
+        <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+          <option value="all">Todos los responsables</option>
+          <option value="unassigned">Sin asignar</option>
+          {TEAM_MEMBERS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
             </option>
           ))}
         </Select>

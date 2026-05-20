@@ -24,6 +24,7 @@ export async function createTask(input: Partial<Task>): Promise<Task> {
     due_date: input.due_date ?? null,
     client_id: input.client_id ?? null,
     project_id: input.project_id ?? null,
+    assignee: input.assignee ?? null,
     tags: input.tags ?? [],
   };
   const { data, error } = await sb.from(TASKS).insert(payload).select().single();

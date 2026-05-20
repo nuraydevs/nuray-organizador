@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils/cn";
-import type { Priority, TaskStatus } from "@/types/database";
+import type {
+  FinanceStatus,
+  Priority,
+  ProjectStatus,
+  TaskStatus,
+} from "@/types/database";
 
 type Tone = "neutral" | "info" | "success" | "warning" | "danger" | "muted";
 
@@ -60,4 +65,26 @@ export function taskStatusTone(s: TaskStatus): Tone {
     default:
       return "neutral";
   }
+}
+
+export function projectStatusTone(s: ProjectStatus): Tone {
+  switch (s) {
+    case "active":
+      return "info";
+    case "completed":
+      return "success";
+    case "on_hold":
+      return "warning";
+    case "cancelled":
+      return "danger";
+    case "pending":
+    case "idea":
+    default:
+      return "muted";
+  }
+}
+
+export function financeStatusTone(s: FinanceStatus, overdue = false): Tone {
+  if (overdue) return "danger";
+  return s === "confirmed" ? "success" : "warning";
 }

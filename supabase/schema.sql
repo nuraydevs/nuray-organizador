@@ -60,11 +60,15 @@ create table if not exists public.projects (
   type text not null default 'internal'
     check (type in ('agency','study','personal','internal')),
   status text not null default 'active'
-    check (status in ('active','paused','completed','archived')),
+    check (status in ('idea','pending','active','on_hold','completed','cancelled')),
   priority text not null default 'medium'
     check (priority in ('low','medium','high','urgent')),
+  client_id uuid references public.clients(id) on delete set null,
+  owner text,
   start_date date,
+  due_date date,
   end_date date,
+  estimated_value numeric,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -72,6 +76,26 @@ create table if not exists public.projects (
 
 create or replace trigger trg_projects_updated_at before update on public.projects
 for each row execute function set_updated_at();
+
+-- Idempotent upgrades for existing installs ------------------
+alter table public.projects add column if not exists client_id uuid
+  references public.clients(id) on delete set null;
+alter table public.projects add column if not exists owner text;
+alter table public.projects add column if not exists due_date date;
+alter table public.projects add column if not exists estimated_value numeric;
+
+-- Migrate legacy status values, then swap the check constraint
+update public.projects set status = 'on_hold'   where status = 'paused';
+update public.projects set status = 'cancelled' where status = 'archived';
+
+alter table public.projects drop constraint if exists projects_status_check;
+alter table public.projects
+  add constraint projects_status_check
+  check (status in ('idea','pending','active','on_hold','completed','cancelled'));
+
+create index if not exists idx_projects_client   on public.projects (client_id);
+create index if not exists idx_projects_status   on public.projects (status);
+create index if not exists idx_projects_due_date on public.projects (due_date);
 
 -- =============================================================
 -- reminders
@@ -143,6 +167,7 @@ create table if not exists public.tasks (
   client_id uuid references public.clients(id) on delete set null,
   project_id uuid references public.projects(id) on delete set null,
   reminder_id uuid references public.reminders(id) on delete set null,
+  assignee text check (assignee in ('oliver','armando','alvaro')),
   tags text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -151,10 +176,18 @@ create table if not exists public.tasks (
 create or replace trigger trg_tasks_updated_at before update on public.tasks
 for each row execute function set_updated_at();
 
+-- Idempotent upgrade for existing installs: team-member assignee
+alter table public.tasks add column if not exists assignee text;
+alter table public.tasks drop constraint if exists tasks_assignee_check;
+alter table public.tasks
+  add constraint tasks_assignee_check
+  check (assignee is null or assignee in ('oliver','armando','alvaro'));
+
 create index if not exists idx_tasks_status on public.tasks (status);
 create index if not exists idx_tasks_due_date on public.tasks (due_date);
 create index if not exists idx_tasks_client on public.tasks (client_id);
 create index if not exists idx_tasks_project on public.tasks (project_id);
+create index if not exists idx_tasks_assignee on public.tasks (assignee);
 
 -- =============================================================
 -- task_checklist_items
@@ -223,6 +256,39 @@ create index if not exists idx_captures_created_at on public.quick_captures (cre
 create index if not exists idx_captures_type       on public.quick_captures (type);
 
 -- =============================================================
+-- finance_transactions
+-- Internal income/expense ledger. Optionally linked to a client
+-- and/or project. "overdue" is derived in the UI (pending +
+-- due_date < today), so only pending/confirmed are stored.
+-- =============================================================
+create table if not exists public.finance_transactions (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('income','expense')),
+  status text not null default 'pending'
+    check (status in ('pending','confirmed')),
+  amount numeric not null default 0,
+  concept text not null,
+  category text,
+  transaction_date date not null default current_date,
+  due_date date,
+  client_id uuid references public.clients(id) on delete set null,
+  project_id uuid references public.projects(id) on delete set null,
+  payment_method text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace trigger trg_finance_updated_at before update on public.finance_transactions
+for each row execute function set_updated_at();
+
+create index if not exists idx_finance_date    on public.finance_transactions (transaction_date desc);
+create index if not exists idx_finance_type    on public.finance_transactions (type);
+create index if not exists idx_finance_status  on public.finance_transactions (status);
+create index if not exists idx_finance_client  on public.finance_transactions (client_id);
+create index if not exists idx_finance_project on public.finance_transactions (project_id);
+
+-- =============================================================
 -- app_settings (single-row key/value store, optional)
 -- =============================================================
 create table if not exists public.app_settings (
@@ -252,6 +318,7 @@ alter table public.calendar_events       enable row level security;
 alter table public.app_settings          enable row level security;
 alter table public.notification_targets  enable row level security;
 alter table public.quick_captures        enable row level security;
+alter table public.finance_transactions  enable row level security;
 
 do $$ begin
   if not exists (select 1 from pg_policies where policyname = 'open_clients') then
@@ -280,6 +347,9 @@ do $$ begin
   end if;
   if not exists (select 1 from pg_policies where policyname = 'open_captures') then
     create policy open_captures on public.quick_captures for all using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'open_finance') then
+    create policy open_finance on public.finance_transactions for all using (true) with check (true);
   end if;
 end $$;
 

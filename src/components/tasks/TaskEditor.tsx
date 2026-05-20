@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { PRIORITIES, TASK_STATUSES } from "@/types/app";
+import { PRIORITIES, TASK_STATUSES, TEAM_MEMBERS } from "@/types/app";
 import type {
   Client,
   Priority,
@@ -14,6 +14,7 @@ import type {
   Task,
   TaskChecklistItem,
   TaskStatus,
+  TeamMember,
 } from "@/types/database";
 import {
   addChecklistItem,
@@ -31,6 +32,7 @@ export function TaskEditor({
   task,
   clients,
   projects,
+  defaultProjectId = "",
   onClose,
   onSaved,
   onDeleted,
@@ -39,6 +41,7 @@ export function TaskEditor({
   task: Task | null;
   clients: Client[];
   projects: Project[];
+  defaultProjectId?: string;
   onClose: () => void;
   onSaved: (task: Task) => void;
   onDeleted?: (id: string) => void;
@@ -51,6 +54,7 @@ export function TaskEditor({
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [assignee, setAssignee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -66,7 +70,8 @@ export function TaskEditor({
     setPriority(task?.priority ?? "medium");
     setDueDate(toInputDateTime(task?.due_date));
     setClientId(task?.client_id ?? "");
-    setProjectId(task?.project_id ?? "");
+    setProjectId(task?.project_id ?? defaultProjectId);
+    setAssignee(task?.assignee ?? "");
     setConfirmDelete(false);
     if (task?.id) {
       listChecklist(task.id)
@@ -75,7 +80,7 @@ export function TaskEditor({
     } else {
       setItems([]);
     }
-  }, [open, task]);
+  }, [open, task, defaultProjectId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,6 +99,7 @@ export function TaskEditor({
         due_date: fromInputDateTime(dueDate),
         client_id: clientId || null,
         project_id: projectId || null,
+        assignee: (assignee || null) as TeamMember | null,
       };
       const saved = task
         ? await updateTask(task.id, payload)
@@ -283,20 +289,36 @@ export function TaskEditor({
           </Field>
         </div>
 
-        <Field label="Proyecto" htmlFor="t-project">
-          <Select
-            id="t-project"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-          >
-            <option value="">— Ninguno —</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Proyecto" htmlFor="t-project">
+            <Select
+              id="t-project"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+            >
+              <option value="">— Ninguno —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Responsable" htmlFor="t-assignee">
+            <Select
+              id="t-assignee"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+            >
+              <option value="">— Sin asignar —</option>
+              {TEAM_MEMBERS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
 
         {task ? (
           <div className="border-t border-border pt-4">

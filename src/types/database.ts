@@ -30,7 +30,18 @@ export type PaymentStatus =
   | "not_applicable";
 
 export type ProjectType = "agency" | "study" | "personal" | "internal";
-export type ProjectStatus = "active" | "paused" | "completed" | "archived";
+export type ProjectStatus =
+  | "idea"
+  | "pending"
+  | "active"
+  | "on_hold"
+  | "completed"
+  | "cancelled";
+
+export type TeamMember = "oliver" | "armando" | "alvaro";
+
+export type FinanceType = "income" | "expense";
+export type FinanceStatus = "pending" | "confirmed";
 
 export type CalendarEventType =
   | "work"
@@ -90,8 +101,12 @@ export interface Project extends DbBase {
   type: ProjectType;
   status: ProjectStatus;
   priority: Priority;
+  client_id: string | null;
+  owner: string | null;
   start_date: string | null;
+  due_date: string | null;
   end_date: string | null;
+  estimated_value: number | null;
   notes: string | null;
 }
 
@@ -104,7 +119,22 @@ export interface Task extends DbBase {
   client_id: string | null;
   project_id: string | null;
   reminder_id: string | null;
+  assignee: TeamMember | null;
   tags: string[];
+}
+
+export interface FinanceTransaction extends DbBase {
+  type: FinanceType;
+  status: FinanceStatus;
+  amount: number;
+  concept: string;
+  category: string | null;
+  transaction_date: string;
+  due_date: string | null;
+  client_id: string | null;
+  project_id: string | null;
+  payment_method: string | null;
+  notes: string | null;
 }
 
 export interface TaskChecklistItem extends DbBase {

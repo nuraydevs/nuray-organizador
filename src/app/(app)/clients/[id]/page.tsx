@@ -3,11 +3,19 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Pencil, Bell, Calendar as CalendarIcon, ListChecks } from "lucide-react";
+import {
+  ArrowLeft,
+  Pencil,
+  Bell,
+  Calendar as CalendarIcon,
+  ListChecks,
+  Wallet,
+  FolderKanban,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge, priorityTone } from "@/components/ui/Badge";
+import { Badge, priorityTone, projectStatusTone } from "@/components/ui/Badge";
 import { PageLoader } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
@@ -17,9 +25,20 @@ import { getClient } from "@/lib/repositories/clients";
 import { listTasks } from "@/lib/repositories/tasks";
 import { listEvents } from "@/lib/repositories/events";
 import { listReminders } from "@/lib/repositories/reminders";
-import type { CalendarEvent, Client, Reminder, Task } from "@/types/database";
-import { CLIENT_STATUSES, PRIORITIES } from "@/types/app";
+import { listProjects } from "@/lib/repositories/projects";
+import { listTransactions } from "@/lib/repositories/finance";
+import type {
+  CalendarEvent,
+  Client,
+  FinanceTransaction,
+  Project,
+  Reminder,
+  Task,
+} from "@/types/database";
+import { CLIENT_STATUSES, PRIORITIES, PROJECT_STATUSES } from "@/types/app";
 import { smartDateLabel } from "@/lib/utils/dates";
+import { formatMoney } from "@/lib/utils/money";
+import { summarize } from "@/lib/finance/summary";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
@@ -30,6 +49,8 @@ export default function ClientDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [txs, setTxs] = useState<FinanceTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -38,11 +59,13 @@ export default function ClientDetailPage() {
     if (!id) return;
     setError(null);
     try {
-      const [c, t, e, r] = await Promise.all([
+      const [c, t, e, r, p, f] = await Promise.all([
         getClient(id),
         listTasks(),
         listEvents(),
         listReminders(),
+        listProjects(),
+        listTransactions(),
       ]);
       setClient(c);
       setTasks(t.filter((x) => x.client_id === id));
@@ -50,6 +73,8 @@ export default function ClientDetailPage() {
       setReminders(
         r.filter((x) => x.related_type === "client" && x.related_id === id),
       );
+      setProjects(p.filter((x) => x.client_id === id));
+      setTxs(f.filter((x) => x.client_id === id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar");
     } finally {
@@ -159,6 +184,82 @@ export default function ClientDetailPage() {
           </CardHeader>
           <CardContent>
             <ImportantLinks client={client} onUpdated={setClient} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet size={14} /> Resumen económico
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {txs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Sin ingresos ni gastos vinculados a este cliente.
+              </p>
+            ) : (
+              (() => {
+                const s = summarize(txs);
+                return (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Ingresos</span>
+                      <span className="tabular-nums">
+                        {formatMoney(s.incomeConfirmed)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Gastos</span>
+                      <span className="tabular-nums">
+                        {formatMoney(s.expenseConfirmed)}
+                      </span>
+                    </div>
+                    <div className="border-t border-border pt-2 flex items-center justify-between font-medium">
+                      <span>Resultado neto</span>
+                      <span
+                        className={
+                          s.net >= 0 ? "text-emerald-700" : "text-rose-700"
+                        }
+                      >
+                        {formatMoney(s.net)}
+                      </span>
+                    </div>
+                    {s.incomePending > 0 ? (
+                      <div className="text-[11px] text-muted-foreground">
+                        Pendiente de cobro: {formatMoney(s.incomePending)}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderKanban size={14} /> Proyectos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {projects.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin proyectos vinculados.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {projects.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <Link href={`/projects/${p.id}`} className="text-sm hover:underline truncate">
+                      {p.name}
+                    </Link>
+                    <Badge tone={projectStatusTone(p.status)}>
+                      {PROJECT_STATUSES.find((s) => s.value === p.status)?.label}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 

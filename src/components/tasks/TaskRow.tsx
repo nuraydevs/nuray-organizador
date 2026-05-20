@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Tag } from "lucide-react";
+import { Calendar, Tag, User } from "lucide-react";
 import { Badge, priorityTone, taskStatusTone } from "@/components/ui/Badge";
-import { PRIORITIES, TASK_STATUSES } from "@/types/app";
+import { PRIORITIES, TASK_STATUSES, teamMemberLabel } from "@/types/app";
 import { smartDateLabel } from "@/lib/utils/dates";
 import type { Client, Project, Task } from "@/types/database";
 import { updateTask } from "@/lib/repositories/tasks";
@@ -78,6 +78,11 @@ export function TaskRow({
           </span>
           <Badge tone={priorityTone(task.priority)}>{priorityLabel}</Badge>
           <Badge tone={taskStatusTone(task.status)}>{statusLabel}</Badge>
+          {task.assignee ? (
+            <Badge tone="muted">
+              <User size={11} /> {teamMemberLabel(task.assignee)}
+            </Badge>
+          ) : null}
           {overdue ? <Badge tone="danger">Atrasada</Badge> : null}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-muted-foreground">
