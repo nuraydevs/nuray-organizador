@@ -43,9 +43,31 @@ create table if not exists public.clients (
   important_links jsonb,
   payment_status text not null default 'not_applicable'
     check (payment_status in ('unpaid','partially_paid','paid','not_applicable')),
+  analytics_sync_status text
+    check (analytics_sync_status in ('synced','failed')),
+  analytics_last_synced_at timestamptz,
+  analytics_sync_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.clients
+  add column if not exists analytics_sync_status text,
+  add column if not exists analytics_last_synced_at timestamptz,
+  add column if not exists analytics_sync_error text;
+
+do $$ begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'clients_analytics_sync_status_check'
+      and conrelid = 'public.clients'::regclass
+  ) then
+    alter table public.clients
+      add constraint clients_analytics_sync_status_check
+      check (analytics_sync_status in ('synced','failed'));
+  end if;
+end $$;
 
 create or replace trigger trg_clients_updated_at before update on public.clients
 for each row execute function set_updated_at();
