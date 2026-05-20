@@ -1,4 +1,5 @@
 import type { FinanceTransaction } from "@/types/database";
+import { parseDateOnly, startOfToday } from "@/lib/utils/dates";
 
 export interface FinanceSummary {
   incomeConfirmed: number;
@@ -9,10 +10,11 @@ export interface FinanceSummary {
   margin: number | null;
 }
 
-export function isOverdue(tx: FinanceTransaction, now = new Date()): boolean {
+export function isOverdue(tx: FinanceTransaction, today = startOfToday()): boolean {
   if (tx.status !== "pending" || !tx.due_date) return false;
-  const due = new Date(tx.due_date);
-  return due.getTime() < now.setHours(0, 0, 0, 0);
+  const due = parseDateOnly(tx.due_date);
+  if (!due) return false;
+  return due.getTime() < today.getTime();
 }
 
 /** Aggregates a list of transactions into confirmed/pending totals and net. */
@@ -51,7 +53,7 @@ export function inMonth(
   year: number,
   month: number,
 ): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
+  const d = parseDateOnly(dateStr);
+  if (!d) return false;
   return d.getFullYear() === year && d.getMonth() === month;
 }

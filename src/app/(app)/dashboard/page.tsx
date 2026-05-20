@@ -40,15 +40,9 @@ import type {
   Task,
 } from "@/types/database";
 import { TEAM_MEMBERS } from "@/types/app";
-import { smartDateLabel } from "@/lib/utils/dates";
+import { smartDateLabel, parseDateOnly, startOfToday } from "@/lib/utils/dates";
 import { formatMoney } from "@/lib/utils/money";
 import { summarize, inMonth } from "@/lib/finance/summary";
-
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 export default function DashboardPage() {
   const quickAdd = useQuickAdd();
@@ -115,15 +109,12 @@ export default function DashboardPage() {
     [projects],
   );
   const projectsDueSoon = useMemo(() => {
-    const today = startOfToday();
-    const soon = addDays(today, 7);
-    return projects.filter(
-      (p) =>
-        p.status !== "completed" &&
-        p.status !== "cancelled" &&
-        p.due_date != null &&
-        new Date(p.due_date) <= soon,
-    );
+    const soon = addDays(startOfToday(), 7);
+    return projects.filter((p) => {
+      if (p.status === "completed" || p.status === "cancelled") return false;
+      const due = parseDateOnly(p.due_date);
+      return due != null && due <= soon;
+    });
   }, [projects]);
   const activeProjectsWithoutTasks = useMemo(() => {
     const withTasks = new Set(tasks.map((t) => t.project_id).filter(Boolean));

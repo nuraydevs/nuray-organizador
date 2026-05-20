@@ -25,7 +25,7 @@ import {
   FINANCE_TYPES,
   financeCategoryLabel,
 } from "@/types/app";
-import { formatDate } from "@/lib/utils/dates";
+import { formatDate, parseDateOnly } from "@/lib/utils/dates";
 import { formatMoney } from "@/lib/utils/money";
 import { summarize, isOverdue, inMonth } from "@/lib/finance/summary";
 
@@ -83,8 +83,8 @@ export default function FinancePage() {
 
   const inPeriod = useCallback(
     (tx: FinanceTransaction) => {
-      const d = new Date(tx.transaction_date);
-      if (d.getFullYear() !== year) return false;
+      const d = parseDateOnly(tx.transaction_date);
+      if (!d || d.getFullYear() !== year) return false;
       if (month !== "all" && d.getMonth() !== month) return false;
       return true;
     },
@@ -182,7 +182,10 @@ export default function FinancePage() {
 
   const years = useMemo(() => {
     const set = new Set<number>([new Date().getFullYear()]);
-    txs.forEach((t) => set.add(new Date(t.transaction_date).getFullYear()));
+    txs.forEach((t) => {
+      const d = parseDateOnly(t.transaction_date);
+      if (d) set.add(d.getFullYear());
+    });
     return [...set].sort((a, b) => b - a);
   }, [txs]);
 

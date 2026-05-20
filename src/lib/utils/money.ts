@@ -4,7 +4,11 @@ const EUR = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 2,
 });
 
-export function formatMoney(value: number | null | undefined): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  return EUR.format(value);
+export function formatMoney(
+  value: number | string | null | undefined,
+): string {
+  if (value == null) return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return "—";
+  return EUR.format(n);
 }

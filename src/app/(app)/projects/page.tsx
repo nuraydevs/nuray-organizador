@@ -15,7 +15,7 @@ import { listTasks } from "@/lib/repositories/tasks";
 import { listClients } from "@/lib/repositories/clients";
 import type { Client, Project, Task } from "@/types/database";
 import { PRIORITIES, PROJECT_STATUSES, teamMemberLabel } from "@/types/app";
-import { formatDate } from "@/lib/utils/dates";
+import { formatDate, parseDateOnly, startOfToday } from "@/lib/utils/dates";
 
 type DueFilter = "all" | "overdue" | "soon" | "none";
 
@@ -63,8 +63,7 @@ export default function ProjectsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const now = startOfToday();
     const soon = new Date(now);
     soon.setDate(soon.getDate() + 7);
     return projects.filter((p) => {
@@ -72,7 +71,7 @@ export default function ProjectsPage() {
       if (priorityFilter !== "all" && p.priority !== priorityFilter) return false;
       if (clientFilter !== "all" && p.client_id !== clientFilter) return false;
       if (dueFilter !== "all") {
-        const due = p.due_date ? new Date(p.due_date) : null;
+        const due = parseDateOnly(p.due_date);
         if (dueFilter === "none" && due) return false;
         if (dueFilter === "overdue" && !(due && due < now)) return false;
         if (dueFilter === "soon" && !(due && due >= now && due <= soon)) return false;
@@ -193,11 +192,12 @@ export default function ProjectsPage() {
           {filtered.map((p) => {
             const prog = progressFor(p.id);
             const cname = clientName(p.client_id);
+            const dueDate = parseDateOnly(p.due_date);
             const overdue =
-              p.due_date != null &&
+              dueDate != null &&
               p.status !== "completed" &&
               p.status !== "cancelled" &&
-              new Date(p.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
+              dueDate < startOfToday();
             return (
               <Link
                 key={p.id}
